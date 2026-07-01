@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductImage } from "@/components/ProductImage";
+import { AddToCart } from "@/components/AddToCart";
+import { ShareAffiliate } from "@/components/ShareAffiliate";
 import { JsonLdScript } from "@/components/JsonLd";
 import { getProduct, getProducts, SITE_URL } from "@/lib/api";
 import { formatVND } from "@/lib/format";
@@ -34,7 +37,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const [p, all] = await Promise.all([getProduct(slug), getProducts()]);
   if (!p) notFound();
 
-  const minPrice = p.variants.length > 0 ? Math.min(...p.variants.map((v) => v.price_vnd)) : 0;
+  const price = p.price_vnd;
   const images = p.images ?? [];
   const related = all.filter((x) => x.slug !== p.slug).slice(0, 3);
 
@@ -51,8 +54,8 @@ export default async function ProductDetailPage({ params }: Props) {
             name: p.name,
             slug: p.slug,
             description: p.short_desc || p.meta_description,
-            price: minPrice,
-            sku: p.variants[0]?.sku,
+            price: price,
+            sku: p.sku,
           }),
         ]}
       />
@@ -67,18 +70,14 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* Gallery */}
         <div>
           <div className="aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-forest-100 to-cream-100">
-            {images[0] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={images[0]} alt={p.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center font-serif text-7xl text-forest-300/50">HK</span>
-            )}
+            <ProductImage src={images[0]} alt={p.name} className="h-full w-full object-cover" />
           </div>
           {images.length > 1 && (
             <div className="mt-3 grid grid-cols-4 gap-3">
               {images.slice(0, 4).map((src, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={src} alt={`${p.name} ${i + 1}`} className="aspect-square w-full rounded-lg object-cover" />
+                <div key={i} className="aspect-square overflow-hidden rounded-lg bg-gradient-to-br from-forest-100 to-cream-100">
+                  <ProductImage src={src} alt={`${p.name} ${i + 1}`} className="h-full w-full object-cover" />
+                </div>
               ))}
             </div>
           )}
@@ -86,31 +85,28 @@ export default async function ProductDetailPage({ params }: Props) {
 
         {/* Info */}
         <div>
+          {p.badge && (
+            <span className="mb-3 inline-block rounded-full bg-gold-100 px-3 py-1 text-xs font-semibold text-gold-700">
+              {p.badge}
+            </span>
+          )}
           <h1 className="font-serif text-3xl font-bold text-forest-900 sm:text-4xl">{p.name}</h1>
           <p className="mt-3 text-ink/60">{p.short_desc}</p>
-          <p className="num mt-6 text-3xl font-bold text-forest-800">{formatVND(minPrice)}</p>
+          <p className="num mt-6 text-3xl font-bold text-forest-800">{formatVND(price)}</p>
 
-          {p.variants.length > 0 && (
-            <div className="mt-6">
-              <p className="mb-2 text-sm font-medium text-ink/70">Quy cách</p>
-              <div className="flex flex-wrap gap-3">
-                {p.variants.map((v) => (
-                  <div key={v.id} className="card px-4 py-3">
-                    <p className="text-sm font-medium text-forest-900">{v.name}</p>
-                    <p className="num text-sm text-gold-600">{formatVND(v.price_vnd)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button className="btn btn-gold mt-8 w-full px-8 py-3 text-sm sm:w-auto">Mua ngay</button>
+          <AddToCart
+            variant="buy"
+            product={{ id: p.id, slug: p.slug, name: p.name, price_vnd: price, image: images[0] }}
+          />
+          <div className="mt-4">
+            <ShareAffiliate slug={p.slug} />
+          </div>
 
           <dl className="mt-8 grid grid-cols-2 gap-4 border-t border-cream-200 pt-6 text-sm">
-            <div><dt className="text-ink/40">Cam kết</dt><dd className="mt-0.5 font-medium text-forest-900">Chính hãng 100%</dd></div>
-            <div><dt className="text-ink/40">Truy xuất</dt><dd className="mt-0.5 font-medium text-forest-900">Theo từng lô</dd></div>
-            <div><dt className="text-ink/40">Giao hàng</dt><dd className="mt-0.5 font-medium text-forest-900">Hub theo khu vực</dd></div>
-            <div><dt className="text-ink/40">Đổi trả</dt><dd className="mt-0.5 font-medium text-forest-900">Trong 7 ngày</dd></div>
+            <div><dt className="text-ink/40">Cam kết</dt><dd className="mt-0.5 font-medium text-forest-900">{p.specs.warranty}</dd></div>
+            <div><dt className="text-ink/40">Truy xuất</dt><dd className="mt-0.5 font-medium text-forest-900">{p.specs.trace}</dd></div>
+            <div><dt className="text-ink/40">Giao hàng</dt><dd className="mt-0.5 font-medium text-forest-900">{p.specs.delivery}</dd></div>
+            <div><dt className="text-ink/40">Đổi trả</dt><dd className="mt-0.5 font-medium text-forest-900">{p.specs.return}</dd></div>
           </dl>
         </div>
       </div>

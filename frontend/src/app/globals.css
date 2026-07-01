@@ -112,11 +112,15 @@
     background: #fff;
     border-radius: 10px;
     padding: 10px 14px;
-    font-size: 14px;
+    /* 16px trên mobile để iOS/Safari KHÔNG tự zoom khi focus; desktop thu về 14px cho gọn. */
+    font-size: 16px;
     color: var(--color-ink);
     outline: none;
     min-height: 44px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  @media (min-width: 640px) {
+    .f-input, .f-textarea, .f-select { font-size: 14px; }
   }
   .f-input::placeholder, .f-textarea::placeholder { color: rgba(26, 29, 26, 0.3); }
   .f-input:focus, .f-textarea:focus, .f-select:focus {

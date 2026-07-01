@@ -1,7 +1,8 @@
-// Cấu hình site do Admin CMS điều khiển. Đọc server-side (URL nội bộ) với default fallback.
-import { API_URL } from "./api";
-
-const SERVER_API_URL = process.env.INTERNAL_API_URL ?? API_URL;
+// Cấu hình site cho duoclieuhk.vn. NGUỒN: admin CMS bên invest (admin.duoclieuhk.vn)
+// qua GET /api/v1/settings (contact + năm thành lập). Các field invest chưa quản lý
+// (SEO/hero/FAQ...) tạm dùng default; sẽ chuyển dần về admin invest (sync ổn trước, gộp sau).
+const INVEST_PUBLIC_URL = process.env.NEXT_PUBLIC_INVEST_API_URL ?? "http://localhost:8080";
+const INVEST_SERVER_URL = process.env.INVEST_INTERNAL_API_URL ?? INVEST_PUBLIC_URL;
 
 export type SiteSettings = {
   seo: { title: string; titleTemplate: string; description: string; keywords: string };
@@ -24,9 +25,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
       "HKGROUP — dược liệu lên men theo công thức cổ truyền kết hợp công nghệ hiện đại. Sản phẩm chuẩn hoá, truy xuất nguồn gốc, chương trình Affiliate minh bạch.",
     keywords: "dược liệu, lên men, thảo dược, HKGROUP, sức khỏe",
   },
-  brand: { name: "HKGROUP", logoUrl: "", tagline: "Since 2019" },
+  brand: { name: "HKGROUP", logoUrl: "/logo.png", tagline: "Since 2026" },
   hero: {
-    eyebrow: "HKGROUP · Since 2019",
+    eyebrow: "HKGROUP · Since 2026",
     titleLead: "Dược liệu lên men,",
     titleAccent: "tinh hoa",
     titleRest: "từ thiên nhiên Việt",
@@ -36,11 +37,11 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     ctaSecondary: "Trở thành Affiliate",
   },
   stats: [
-    { value: "2019", label: "Năm thành lập" },
+    { value: "2026", label: "Năm thành lập" },
     { value: "100%", label: "Dược liệu Việt" },
     { value: "90 ngày", label: "Lên men chuẩn" },
   ],
-  contact: { phone: "1900 0000", email: "hello@hkgroup.vn", address: "Hà Nội, Việt Nam" },
+  contact: { phone: "0948 579 759", email: "info@duoclieuhk.vn", address: "TP Cần Thơ, Việt Nam" },
   footer: {
     about:
       "Dược liệu lên men theo công thức cổ truyền kết hợp công nghệ hiện đại — mang lại sự cân bằng cho cơ thể mỗi ngày.",
@@ -50,25 +51,52 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   faq: [],
 };
 
-function deepMerge<T>(base: T, over: unknown): T {
-  if (over === null || over === undefined) return base;
-  if (typeof base !== "object" || Array.isArray(base)) return (over as T) ?? base;
-  const out = { ...(base as Record<string, unknown>) };
-  for (const [k, v] of Object.entries(over as Record<string, unknown>)) {
-    if (v === undefined) continue;
-    const b = (base as Record<string, unknown>)[k];
-    out[k] = b && typeof b === "object" && !Array.isArray(b) ? deepMerge(b, v) : v;
+// Invest trả settings dạng flat map key→string (contact_hotline, brand_since, ...).
+type InvestSettings = Record<string, string>;
+
+async function fetchInvestSettings(): Promise<InvestSettings> {
+  try {
+    const res = await fetch(`${INVEST_SERVER_URL}/api/v1/settings`, { next: { revalidate: 30 } });
+    if (!res.ok) return {};
+    return (await res.json()) as InvestSettings;
+  } catch {
+    return {};
   }
-  return out as T;
 }
 
 export async function getSettings(): Promise<SiteSettings> {
-  try {
-    const res = await fetch(`${SERVER_API_URL}/api/settings`, { next: { revalidate: 30 } });
-    if (!res.ok) return DEFAULT_SETTINGS;
-    const data = await res.json();
-    return deepMerge(DEFAULT_SETTINGS, data);
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+  const inv = await fetchInvestSettings();
+  const since = inv.brand_since?.trim() || "2026";
+
+  // clone default rồi ghi đè bằng config từ admin invest
+  const s: SiteSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  const pick = (v?: string) => (v && v.trim() ? v.trim() : undefined);
+
+  // Thương hiệu — logo có thể là URL tuyệt đối hoặc path tương đối /api/v1/public/images/...
+  s.brand.name = pick(inv.brand_name) ?? s.brand.name;
+  const logo = pick(inv.brand_logo_url);
+  if (logo) s.brand.logoUrl = /^https?:\/\//i.test(logo) ? logo : `${INVEST_PUBLIC_URL}${logo.startsWith("/") ? "" : "/"}${logo}`;
+  s.brand.tagline = pick(inv.brand_tagline) ?? `Since ${since}`;
+  s.hero.eyebrow = `${s.brand.name} · Since ${since}`;
+  if (s.stats[0]) s.stats[0].value = since;
+  const heroSub = pick(inv.hero_subtitle);
+  if (heroSub) s.hero.subtitle = heroSub;
+
+  // SEO
+  s.seo.title = pick(inv.seo_title) ?? s.seo.title;
+  s.seo.description = pick(inv.seo_description) ?? s.seo.description;
+  s.seo.keywords = pick(inv.seo_keywords) ?? s.seo.keywords;
+
+  // Liên hệ
+  s.contact.phone = pick(inv.contact_hotline) ?? s.contact.phone;
+  s.contact.email = pick(inv.contact_email) ?? s.contact.email;
+  s.contact.address = pick(inv.contact_address) ?? s.contact.address;
+
+  // Footer + mạng xã hội
+  s.footer.about = pick(inv.footer_about) ?? s.footer.about;
+  s.footer.facebook = pick(inv.social_facebook) ?? s.footer.facebook;
+  s.footer.youtube = pick(inv.social_youtube) ?? s.footer.youtube;
+  s.footer.zalo = pick(inv.social_zalo) ?? s.footer.zalo;
+
+  return s;
 }

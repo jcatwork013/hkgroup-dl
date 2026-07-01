@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandMark } from "./BrandMark";
+import { POLICY_LINKS } from "@/lib/policies";
 import type { SiteSettings } from "@/lib/settings";
 
 export function Footer({ settings }: { settings: SiteSettings }) {
@@ -12,7 +13,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
 
   return (
     <footer className="mt-20 bg-forest-950 text-cream-100/70 sm:mt-24">
-      <div className="container-hk grid gap-10 py-12 sm:py-14 md:grid-cols-4">
+      <div className="container-hk grid gap-10 py-12 sm:py-14 md:grid-cols-2 lg:grid-cols-5">
         <div className="md:col-span-2">
           <BrandMark brand={brand} size="lg" />
           <p className="mt-5 max-w-sm text-sm leading-relaxed">{footer.about}</p>
@@ -25,6 +26,17 @@ export function Footer({ settings }: { settings: SiteSettings }) {
             <li><Link href="/san-pham" className="hover:text-gold-400">Sản phẩm</Link></li>
             <li><Link href="/affiliate" className="hover:text-gold-400">Chương trình Affiliate</Link></li>
             <li><Link href="/ve-chung-toi" className="hover:text-gold-400">Về chúng tôi</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="mb-3 text-sm font-semibold text-cream-50">Chính sách</h4>
+          <ul className="space-y-2 text-sm">
+            {POLICY_LINKS.map((p) => (
+              <li key={p.slug}>
+                <Link href={`/chinh-sach/${p.slug}`} className="hover:text-gold-400">{p.title}</Link>
+              </li>
+            ))}
           </ul>
         </div>
 
