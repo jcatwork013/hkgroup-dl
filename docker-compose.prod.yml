@@ -1,0 +1,134 @@
+# ── HKGROUP PRODUCTION — stack ĐỘC LẬP HOÀN TOÀN ─────────────────────────────
+# Network/volume/image/container/port riêng, KHÔNG đụng project khác.
+# DB/Redis/NATS chạy internal-only (không publish). Chỉ publish web(13110) + api(18090)
+# cho central-nginx proxy tới host-IP. Chạy:
+#   docker compose -f docker-compose.prod.yml up -d --build
+name: hkgroup
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hkgroup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: hkgroup
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [hkgroup-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hk -d hkgroup"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: hkgroup-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks: [hkgroup-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: hkgroup-nats
+    restart: unless-stopped
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    volumes:
+      - natsdata:/data
+    networks: [hkgroup-net]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Chạy migration 1 lần rồi thoát. (dùng lại image do service `api` build)
+  migrate:
+    image: hkgroup-backend:latest
+    container_name: hkgroup-migrate
+    command: ["/usr/local/bin/migrate", "up"]
+    environment:
+      DATABASE_URL: postgres://hk:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/hkgroup?sslmode=disable
+    networks: [hkgroup-net]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: hkgroup-backend:latest
+    build:
+      context: ./backend
+    container_name: hkgroup-api
+    restart: unless-stopped
+    command: ["/usr/local/bin/api"]
+    environment:
+      APP_ENV: production
+      API_PORT: "8090"
+      DATABASE_URL: postgres://hk:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/hkgroup?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      NATS_URL: nats://nats:4222
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env — no default in VCS}
+      API_PUBLIC_URL: https://api-web.duoclieuhk.vn
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "18090:8090" # central-nginx -> 15.235.167.204:18090
+    volumes:
+      - uploads:/data/uploads # ảnh upload — volume ĐỘC LẬP
+    networks: [hkgroup-net]
+    depends_on:
+      postgres: { condition: service_healthy }
+      nats: { condition: service_started }
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    image: hkgroup-backend:latest
+    container_name: hkgroup-worker
+    restart: unless-stopped
+    command: ["/usr/local/bin/worker"]
+    environment:
+      DATABASE_URL: postgres://hk:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/hkgroup?sslmode=disable
+      NATS_URL: nats://nats:4222
+    networks: [hkgroup-net]
+    depends_on:
+      postgres: { condition: service_healthy }
+      nats: { condition: service_started }
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    image: hkgroup-frontend:latest
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: https://api-web.duoclieuhk.vn
+        NEXT_PUBLIC_SITE_URL: https://duoclieuhk.vn
+    container_name: hkgroup-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-side fetch (RSC/sitemap) đi nội bộ docker network, KHÔNG vòng qua Cloudflare.
+      INTERNAL_API_URL: http://api:8090
+    ports:
+      - "13110:3000" # central-nginx -> 15.235.167.204:13110
+    networks: [hkgroup-net]
+    depends_on:
+      api: { condition: service_started }
+
+networks:
+  hkgroup-net:
+    name: hkgroup-net
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  natsdata:
+  uploads:

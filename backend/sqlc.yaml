@@ -1,0 +1,23 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    # sqlc tự nhận format golang-migrate (*.up.sql/*.down.sql) và chỉ áp .up.
+    schema: "db/migrations"
+    queries: "db/queries"
+    gen:
+      go:
+        package: "store"
+        out: "internal/store"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        emit_interface: true
+        overrides:
+          # citext không có sẵn trong sqlc -> map sang string.
+          - db_type: "citext"
+            go_type: "string"
+          - db_type: "citext"
+            nullable: true
+            go_type:
+              type: "string"
+              pointer: true

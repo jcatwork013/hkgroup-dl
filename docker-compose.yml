@@ -1,0 +1,50 @@
+# HKGROUP — hạ tầng dev: Postgres 16 + Redis + NATS JetStream
+# Production dùng managed services; file này chỉ cho local & CI.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hk_postgres
+    environment:
+      POSTGRES_USER: hk
+      POSTGRES_PASSWORD: hk
+      POSTGRES_DB: hkgroup
+    ports:
+      - "5441:5432" # tránh đụng các project khác (5440 đã bị chiếm)
+    volumes:
+      - hk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hk -d hkgroup"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: hk_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6395:6379"
+    volumes:
+      - hk_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: hk_nats
+    command: ["-js", "-m", "8222"] # bật JetStream + monitoring
+    ports:
+      - "4232:4222" # client
+      - "8232:8222" # monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8222/healthz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  hk_pgdata:
+  hk_redisdata:

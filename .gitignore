@@ -1,0 +1,33 @@
+# Go
+/backend/bin/
+/backend/tmp/
+*.test
+*.out
+coverage.*
+
+# Node / Next.js
+node_modules/
+/frontend/.next/
+/frontend/out/
+/frontend/build/
+.pnpm-store/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Docker volumes (local)
+/.data/
+
+# Local one-off backups / dumps (KHÔNG commit — có thể chứa secret)
+_*_backup_*
+*.bak
+*.bak.*
