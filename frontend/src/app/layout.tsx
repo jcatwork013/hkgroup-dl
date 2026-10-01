@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Be_Vietnam_Pro } from "next/font/google";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { PolicyHighlights } from "@/components/PolicyHighlights";
 import { BackToTop } from "@/components/BackToTop";
 import { JsonLdScript } from "@/components/JsonLd";
 import { SITE_URL } from "@/lib/api";
@@ -76,8 +77,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded focus:bg-forest-900 focus:px-4 focus:py-2 focus:text-cream-50">
           Bỏ qua tới nội dung
         </a>
-        <Navbar brand={s.brand} />
+        <Navbar brand={s.brand} phone={s.contact.phone} />
         <main id="main" className="flex-1">{children}</main>
+        <PolicyHighlights />
         <Footer settings={s} />
         <BackToTop />
       </body>

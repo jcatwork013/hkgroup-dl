@@ -6,12 +6,24 @@ type Brand = { name: string; logoUrl: string; tagline?: string };
 export function BrandMark({
   brand,
   size = "md",
+  plain = false,
 }: {
   brand: Brand;
   size?: "md" | "lg";
+  /** Nền sáng (navbar): hiện logo trực tiếp, không cần panel trắng. */
+  plain?: boolean;
 }) {
   const emblem = size === "lg" ? 40 : 34;
   const wordCls = size === "lg" ? "text-2xl" : "text-lg";
+
+  if (brand.logoUrl && plain) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      // Logo admin upload là PNG NỀN TRẮNG (không trong suốt) → multiply: trắng hoà vào nền kem
+      // của navbar, màu logo giữ nguyên. Không cần sửa file ảnh, logo mới upload cũng tự đúng.
+      <img src={brand.logoUrl} alt={brand.name} className="h-12 w-auto max-w-[180px] object-contain mix-blend-multiply [filter:brightness(1.01)] md:h-[58px]" />
+    );
+  }
 
   if (brand.logoUrl) {
     // Logo upload bọc trong panel trắng bo góc -> hợp với mọi logo (kể cả nền trắng)

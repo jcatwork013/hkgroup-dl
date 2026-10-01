@@ -18,6 +18,7 @@ export type ProductListItem = {
   meta_title: string;
   meta_description: string;
   images?: string[];
+  video_url?: string;
 };
 
 export type ProductDetail = {
@@ -32,6 +33,7 @@ export type ProductDetail = {
   meta_title: string;
   meta_description: string;
   images?: string[];
+  video_url?: string;
   specs: { warranty: string; trace: string; delivery: string; return: string };
 };
 
@@ -44,6 +46,8 @@ type InvestProduct = {
   badge: string;
   price_vnd: number;
   image_url: string;
+  images?: string[];
+  video_url?: string;
   summary: string;
   description: string;
   spec_warranty: string;
@@ -59,8 +63,18 @@ function imageURL(u?: string): string | undefined {
   return `${INVEST_PUBLIC_URL}${u.startsWith("/") ? "" : "/"}${u}`;
 }
 
+// Bộ sưu tập ảnh: ẢNH ĐẠI DIỆN (image_url, admin chọn) luôn đứng đầu, sau đó các ảnh còn
+// lại theo thứ tự admin sắp. API cũ chưa có `images` → chỉ còn ảnh đại diện.
+function gallery(p: InvestProduct): string[] {
+  const out: string[] = [];
+  for (const u of [p.image_url, ...(p.images ?? [])]) {
+    const abs = imageURL(u);
+    if (abs && !out.includes(abs)) out.push(abs);
+  }
+  return out;
+}
+
 function toListItem(p: InvestProduct): ProductListItem {
-  const img = imageURL(p.image_url);
   return {
     id: p.id,
     slug: p.slug,
@@ -69,12 +83,12 @@ function toListItem(p: InvestProduct): ProductListItem {
     min_price_vnd: p.price_vnd,
     meta_title: p.name,
     meta_description: p.summary,
-    images: img ? [img] : [],
+    images: gallery(p),
+    video_url: imageURL(p.video_url),
   };
 }
 
 function toDetail(p: InvestProduct): ProductDetail {
-  const img = imageURL(p.image_url);
   return {
     id: p.id,
     slug: p.slug,
@@ -86,7 +100,8 @@ function toDetail(p: InvestProduct): ProductDetail {
     badge: p.badge,
     meta_title: p.name,
     meta_description: p.summary,
-    images: img ? [img] : [],
+    images: gallery(p),
+    video_url: imageURL(p.video_url),
     specs: {
       warranty: p.spec_warranty,
       trace: p.spec_trace,
@@ -96,10 +111,13 @@ function toDetail(p: InvestProduct): ProductDetail {
   };
 }
 
-// Server-side fetch với ISR (revalidate) — tốt cho SEO.
+// Sản phẩm KHÔNG cache: admin thêm/sửa ở admin.duoclieuhk.vn là lên web NGAY lần tải kế tiếp
+// (trước đây ISR 60s + stale-while-revalidate khiến web hiện dữ liệu cũ khá lâu). Trang vẫn
+// render phía server nên SEO không đổi; catalog nhỏ nên mỗi request gọi API là rẻ. Trong
+// một lần render, Next tự gộp các fetch GET trùng URL (metadata + page) thành 1 lần gọi.
 export async function getProducts(): Promise<ProductListItem[]> {
   try {
-    const res = await fetch(`${INVEST_SERVER_URL}/api/v1/products`, { next: { revalidate: 60 } });
+    const res = await fetch(`${INVEST_SERVER_URL}/api/v1/products`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = (await res.json()) as { products: InvestProduct[] };
     return (data.products ?? []).map(toListItem);
@@ -111,7 +129,7 @@ export async function getProducts(): Promise<ProductListItem[]> {
 export async function getProduct(slug: string): Promise<ProductDetail | null> {
   try {
     const res = await fetch(`${INVEST_SERVER_URL}/api/v1/products/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
     if (!res.ok) return null;
     return toDetail((await res.json()) as InvestProduct);

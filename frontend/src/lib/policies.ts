@@ -20,6 +20,22 @@ const FALLBACK: Policy[] = POLICY_LINKS.map((p) => ({
   body: "Nội dung đang được cập nhật. Vui lòng liên hệ hotline để được hỗ trợ.",
 }));
 
+// Nhãn NGẮN cho danh sách nằm dưới tiêu đề "Chính sách" (footer, sidebar): bỏ tiền tố "Chính sách"
+// trùng lặp — 8 dòng cùng mở đầu "Chính sách ..." đọc rất rối. Giữ nguyên title gốc ở trang chi tiết.
+export function shortPolicyLabel(title: string): string {
+  const t = title.replace(/^chính\s+sách\s+/i, "").trim();
+  if (!t) return title;
+  return t.charAt(0).toLocaleUpperCase("vi-VN") + t.slice(1);
+}
+
+// Link chính sách cho footer / sitemap / generateStaticParams — LẤY TỪ CMS để admin thêm chính
+// sách mới (giá, khiếu nại, điều kiện & hạn chế…) là hiện ngay, khỏi sửa code. Lỗi API → fallback
+// POLICY_LINKS tĩnh (getPolicies đã tự fallback).
+export async function getPolicyLinks(): Promise<{ slug: string; title: string }[]> {
+  const policies = await getPolicies();
+  return policies.length ? policies.map((p) => ({ slug: p.slug, title: p.title })) : POLICY_LINKS;
+}
+
 export async function getPolicies(): Promise<Policy[]> {
   try {
     const res = await fetch(`${INVEST_SERVER_URL}/api/v1/policies`, { next: { revalidate: 60 } });

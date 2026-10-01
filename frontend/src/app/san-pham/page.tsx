@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ProductCard } from "@/components/ProductCard";
 import { JsonLdScript } from "@/components/JsonLd";
 import { getProducts } from "@/lib/api";
-import { itemListJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { itemListJsonLd } from "@/lib/seo";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Sản phẩm dược liệu lên men",
@@ -16,16 +17,15 @@ export default async function ProductsPage() {
     <div className="container-hk py-12 sm:py-16">
       <JsonLdScript
         data={[
-          breadcrumbJsonLd([
-            { name: "Trang chủ", url: "/" },
-            { name: "Sản phẩm", url: "/san-pham" },
-          ]),
           itemListJsonLd(products.map((p) => ({ name: p.name, slug: p.slug }))),
         ]}
       />
-      <nav aria-label="breadcrumb" className="mb-4 text-sm text-ink/50">
-        <a href="/" className="hover:text-gold-600">Trang chủ</a> <span className="px-1">/</span> Sản phẩm
-      </nav>
+      <Breadcrumbs
+        items={[
+          { name: "Trang chủ", href: "/" },
+          { name: "Sản phẩm", href: "/san-pham" },
+        ]}
+      />
       <header className="mb-10">
         <p className="eyebrow">Danh mục</p>
         <h1 className="mt-1 font-serif text-3xl font-bold text-forest-900 sm:text-4xl">Sản phẩm</h1>

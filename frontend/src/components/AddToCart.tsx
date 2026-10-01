@@ -30,13 +30,13 @@ export function AddToCart({ product, variant = "card" }: Props) {
 
   if (variant === "buy") {
     return (
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <button onClick={() => add(true)} className="btn btn-gold px-8 py-3 text-sm">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button onClick={() => add(true)} className="btn btn-dark flex-1 px-8 text-[15px] sm:flex-none sm:min-w-[180px]">
           Mua ngay
         </button>
         <button
           onClick={() => add(false)}
-          className="rounded-full border border-forest-300 px-8 py-3 text-sm font-medium text-forest-800 transition-colors hover:bg-forest-50"
+          className="btn btn-ghost flex-1 px-8 text-[15px] sm:flex-none sm:min-w-[180px]"
         >
           {added ? "Đã thêm ✓" : "Thêm vào giỏ"}
         </button>
@@ -47,20 +47,22 @@ export function AddToCart({ product, variant = "card" }: Props) {
   return (
     <button
       onClick={(e) => add(false, e)}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
-        added ? "bg-green-100 text-green-700" : "bg-forest-800 text-gold-300 hover:bg-forest-700"
+      aria-label={added ? "Đã thêm vào giỏ" : `Thêm ${product.name} vào giỏ`}
+      title={added ? "Đã thêm vào giỏ" : "Thêm vào giỏ"}
+      className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
+        added
+          ? "bg-forest-600 text-cream-50"
+          : "bg-forest-900 text-cream-50 hover:scale-105 hover:bg-forest-700"
       }`}
     >
       {added ? (
-        "Đã thêm ✓"
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="m5 12 4.5 4.5L19 7" />
+        </svg>
       ) : (
-        <>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />
-            <path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L23 6H5" />
-          </svg>
-          Thêm
-        </>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+          <path d="M12 5v14M5 12h14" />
+        </svg>
       )}
     </button>
   );

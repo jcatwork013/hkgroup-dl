@@ -368,6 +368,39 @@ export async function investMyOrders(): Promise<MyOrder[] | null> {
   return investGet<MyOrder[]>("/api/v1/me/orders");
 }
 
+// ---- Giới thiệu 1 TẦNG: ai giới thiệu tôi (upline) & khách F1 của CTV (downline) ----
+// Nguồn: khoá first-touch theo SĐT ở backend (customer_referral_locks). KHÔNG có F2/F3.
+
+export type ReferrerInfo = {
+  full_name: string;
+  phone: string;
+  email: string;
+  referral_code: string;
+  role: string;
+  locked_at: string;
+};
+
+// null = chưa đăng ký/mua qua link giới thiệu nào (hoặc chưa đăng nhập).
+export async function investMyReferrer(): Promise<ReferrerInfo | null> {
+  const res = await investGet<{ referrer: ReferrerInfo | null }>("/api/v1/me/referrer");
+  return res?.referrer ?? null;
+}
+
+export type ReferredCustomer = {
+  full_name: string;
+  phone: string;
+  has_account: boolean;
+  locked_at: string;
+  orders_paid: number;
+  revenue_vnd: number;
+  commission_vnd: number;
+};
+
+// Danh sách khách F1 của CTV đang đăng nhập. Khách thường → [] (backend trả rỗng, không lỗi).
+export async function investMyReferredCustomers(): Promise<ReferredCustomer[] | null> {
+  return investGet<ReferredCustomer[]>("/api/v1/me/referred-customers");
+}
+
 export const ROLE_LABEL: Record<string, string> = {
   admin: "Quản trị viên",
   saler: "Cộng tác viên bán hàng",

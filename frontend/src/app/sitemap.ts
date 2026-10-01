@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getProducts, SITE_URL } from "@/lib/api";
-import { POLICY_LINKS } from "@/lib/policies";
+import { getPolicyLinks } from "@/lib/policies";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const products = await getProducts();
@@ -10,7 +10,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  const policyUrls: MetadataRoute.Sitemap = POLICY_LINKS.map((p) => ({
+  // Chính sách lấy từ CMS → chính sách mới admin thêm cũng vào sitemap (SEO), không phải sửa code.
+  const policyUrls: MetadataRoute.Sitemap = (await getPolicyLinks()).map((p) => ({
     url: `${SITE_URL}/chinh-sach/${p.slug}`,
     changeFrequency: "yearly",
     priority: 0.3,

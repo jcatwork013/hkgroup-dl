@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { JsonLdScript } from "@/components/JsonLd";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getPolicies } from "@/lib/policies";
-import { breadcrumbJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Chính sách",
@@ -14,15 +13,12 @@ export default async function PoliciesIndexPage() {
   const policies = await getPolicies();
   return (
     <div className="container-hk py-12 sm:py-16">
-      <JsonLdScript
-        data={breadcrumbJsonLd([
-          { name: "Trang chủ", url: "/" },
-          { name: "Chính sách", url: "/chinh-sach" },
-        ])}
+      <Breadcrumbs
+        items={[
+          { name: "Trang chủ", href: "/" },
+          { name: "Chính sách", href: "/chinh-sach" },
+        ]}
       />
-      <nav aria-label="breadcrumb" className="mb-4 text-sm text-ink/50">
-        <Link href="/" className="hover:text-gold-600">Trang chủ</Link> <span className="px-1">/</span> Chính sách
-      </nav>
       <header className="mb-10">
         <p className="eyebrow">Điều khoản & chính sách</p>
         <h1 className="mt-1 font-serif text-3xl font-bold text-forest-900 sm:text-4xl">Chính sách</h1>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { JsonLdScript } from "@/components/JsonLd";
-import { breadcrumbJsonLd } from "@/lib/seo";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
@@ -13,11 +12,11 @@ export default async function AboutPage() {
   const s = await getSettings();
   return (
     <div className="container-hk max-w-3xl py-12 sm:py-16">
-      <JsonLdScript
-        data={breadcrumbJsonLd([
-          { name: "Trang chủ", url: "/" },
-          { name: "Về chúng tôi", url: "/ve-chung-toi" },
-        ])}
+      <Breadcrumbs
+        items={[
+          { name: "Trang chủ", href: "/" },
+          { name: "Về chúng tôi", href: "/ve-chung-toi" },
+        ]}
       />
       <p className="eyebrow">{s.brand.tagline}</p>
       <h1 className="mt-1 font-serif text-3xl font-bold text-forest-900 sm:text-4xl">Về {s.brand.name}</h1>

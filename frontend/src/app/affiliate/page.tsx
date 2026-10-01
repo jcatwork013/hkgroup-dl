@@ -22,6 +22,8 @@ import {
 import { formatVND } from "@/lib/format";
 import { captureRef } from "@/lib/cart";
 import { AccountTabs } from "@/components/AccountTabs";
+import { StatCard } from "@/components/StatCard";
+import { QrCode, useQrDataUrl } from "@/components/QrCode";
 
 const COMM_STATUS: Record<string, { label: string; cls: string }> = {
   pending: { label: "Chờ duyệt", cls: "bg-amber-100 text-amber-700" },
@@ -219,34 +221,50 @@ export default function AccountPage() {
   }
 
   /* ---------------- ĐÃ ĐĂNG NHẬP ---------------- */
+  const initials =
+    user.full_name.trim().split(/\s+/).filter(Boolean).slice(-2).map((w) => w[0]).join("").toUpperCase() || "HK";
   return (
-    <div className="mx-auto max-w-3xl px-4 py-14">
+    <div className="container-hk max-w-3xl py-12 sm:py-16">
       <AccountTabs active="account" />
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Tài khoản</p>
-          <h1 className="mt-1 font-serif text-3xl font-bold text-forest-900">Xin chào, {user.full_name}</h1>
+
+      {/* Header tài khoản — panel xanh rêu gradient, avatar chữ cái, chip vai trò */}
+      <div className="mt-6 overflow-hidden rounded-card border border-cream-200 shadow-sm">
+        <div className="hero-bg px-6 py-7 sm:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gold-500 font-serif text-2xl font-bold text-forest-950 ring-4 ring-white/10">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-300/90">Tài khoản HKGROUP</p>
+              <h1 className="mt-0.5 truncate font-serif text-2xl font-bold text-cream-50 sm:text-3xl">{user.full_name}</h1>
+              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-cream-50 ring-1 ring-white/15">
+                {ROLE_LABEL[user.role] ?? user.role}
+              </span>
+            </div>
+            <button
+              onClick={onLogout}
+              className="shrink-0 self-start rounded-full border border-white/25 px-4 py-2 text-sm text-cream-50 transition-colors hover:bg-white/10"
+            >
+              Đăng xuất
+            </button>
+          </div>
         </div>
-        <button onClick={onLogout} className="rounded-full border border-cream-200 px-4 py-2 text-sm text-ink/60 transition-colors hover:text-forest-700">
-          Đăng xuất
-        </button>
+        <div className="grid divide-cream-200 bg-white sm:grid-cols-2 sm:divide-x">
+          <ContactItem label="Email" value={user.email}>
+            <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+            <path d="m22 6-10 7L2 6" />
+          </ContactItem>
+          <ContactItem label="Số điện thoại" value={user.phone || "—"}>
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+          </ContactItem>
+        </div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Vai trò</p>
-          <p className="mt-1 font-semibold text-forest-800">{ROLE_LABEL[user.role] ?? user.role}</p>
+      {isAffiliate && (
+        <div className="mt-4">
+          <ReferralLinkCard code={user.referral_code} />
         </div>
-        {isAffiliate && <ReferralLinkCard code={user.referral_code} />}
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Email</p>
-          <p className="mt-1 font-medium text-forest-900">{user.email}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Số điện thoại</p>
-          <p className="mt-1 font-medium text-forest-900">{user.phone || "—"}</p>
-        </div>
-      </div>
+      )}
 
       {/* Khách hàng: mời/đăng ký làm Cộng tác viên */}
       {user.role === "customer" && (
@@ -333,11 +351,28 @@ export default function AccountPage() {
   );
 }
 
+// Dòng thông tin liên hệ trong header (email / SĐT) — icon line-art + nhãn + giá trị.
+function ContactItem({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 px-6 py-4 sm:px-8">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-700">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          {children}
+        </svg>
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-ink/50">{label}</p>
+        <p className="truncate font-medium text-forest-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 // Link giới thiệu của CTV — copy & share. Đây là LINK ĐĂNG KÝ: khách mở link (/affiliate?ref=CODE)
 // → khung đăng ký hiện sẵn mã → đăng ký xong bị KHOÁ theo SĐT về CTV này → mọi đơn sau của khách
 // đổ hoa hồng về đúng người giới thiệu ("ăn ref").
 function ReferralLinkCard({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+  // Tách thân card ra component riêng: phần thân dùng hook (QR) nên KHÔNG được nằm sau early-return.
   if (!code) {
     return (
       <div className="card p-5 sm:col-span-2">
@@ -346,8 +381,14 @@ function ReferralLinkCard({ code }: { code: string }) {
       </div>
     );
   }
+  return <ReferralLinkBody code={code} />;
+}
+
+function ReferralLinkBody({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "https://duoclieuhk.vn";
   const link = `${origin}/affiliate?ref=${code}`;
+  const { src: qr, failed: qrFailed } = useQrDataUrl(link);
 
   async function copy() {
     try {
@@ -361,20 +402,46 @@ function ReferralLinkCard({ code }: { code: string }) {
 
   return (
     <div className="card p-5 sm:col-span-2">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-ink/50">Link giới thiệu <span className="font-mono text-forest-700">({code})</span></p>
-        <button
-          onClick={copy}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-forest-300 px-3.5 py-1.5 text-xs font-medium text-forest-700 transition-colors hover:bg-forest-50"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-          {copied ? "Đã copy ✓" : "Copy link"}
-        </button>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-ink/50">Link giới thiệu <span className="font-mono text-forest-700">({code})</span></p>
+          <p className="mt-2 break-all font-mono text-sm text-forest-800">{link}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              onClick={copy}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-forest-300 px-3.5 py-1.5 text-xs font-medium text-forest-700 transition-colors hover:bg-forest-50"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              {copied ? "Đã copy ✓" : "Copy link"}
+            </button>
+            {qr && (
+              <a
+                href={qr}
+                download={`qr-gioi-thieu-${code}.png`}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-forest-300 px-3.5 py-1.5 text-xs font-medium text-forest-700 transition-colors hover:bg-forest-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" />
+                </svg>
+                Tải ảnh QR
+              </a>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-ink/45">
+            Chia sẻ link hoặc để khách quét mã QR — khách sẽ thấy khung đăng ký kèm mã của bạn. Đăng ký xong, mọi đơn mua của họ đều ghi hoa hồng về bạn.
+          </p>
+        </div>
+
+        {/* QR của chính link đăng ký ở trên — in ra card/standee, khách quét là vào form đăng ký. */}
+        {!qrFailed && (
+          <div className="flex shrink-0 flex-col items-center gap-1.5 self-center sm:self-start">
+            <QrCode src={qr} size={148} alt={`Mã QR link giới thiệu ${code}`} />
+            <span className="text-[11px] text-ink/45">Quét để đăng ký</span>
+          </div>
+        )}
       </div>
-      <p className="mt-2 break-all font-mono text-sm text-forest-800">{link}</p>
-      <p className="mt-2 text-xs text-ink/45">Chia sẻ link này — khách mở link sẽ thấy khung đăng ký kèm mã của bạn. Đăng ký xong, mọi đơn mua của họ đều ghi hoa hồng về bạn.</p>
     </div>
   );
 }
@@ -479,18 +546,9 @@ function PayoutCard({ wallet, onWithdraw, busy }: { wallet: Wallet | null; onWit
     <section className="mt-8">
       <h2 className="font-serif text-xl font-bold text-forest-900">Tài khoản hoa hồng affiliate</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Khả dụng (có thể rút)</p>
-          <p className="num mt-1 text-2xl font-bold text-forest-800">{formatVND(wallet?.available_vnd ?? 0)}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Chờ duyệt</p>
-          <p className="num mt-1 text-2xl font-bold text-gold-600">{formatVND(wallet?.pending_vnd ?? 0)}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs text-ink/50">Đã rút / đang xử lý</p>
-          <p className="num mt-1 text-2xl font-bold text-ink/50">{formatVND(wallet?.withdrawn_vnd ?? 0)}</p>
-        </div>
+        <StatCard label="Khả dụng (có thể rút)" value={formatVND(wallet?.available_vnd ?? 0)} tone="forest" hint="Sẵn sàng thanh toán" />
+        <StatCard label="Chờ duyệt" value={formatVND(wallet?.pending_vnd ?? 0)} tone="gold" hint="Hoa hồng đang xét" />
+        <StatCard label="Đã rút / đang xử lý" value={formatVND(wallet?.withdrawn_vnd ?? 0)} hint="Đã yêu cầu thanh toán" />
       </div>
       <button
         onClick={onWithdraw}
