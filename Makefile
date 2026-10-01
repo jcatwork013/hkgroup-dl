@@ -78,6 +78,20 @@ grep-float: ## BẤT BIẾN #1: chặn float trên đường đi của tiền
 	@echo "✅ Không có float trên đường đi của tiền."
 
 # ---------- Frontend ----------
+# ---------- Vận hành site (công tắc tạm đóng) ----------
+.PHONY: site-close
+site-close: ## ĐÓNG toàn bộ duoclieuhk (web + invest + admin + api) → 503 + trang tạm đóng
+	sudo ./deploy/hk-site.sh close
+
+.PHONY: site-open
+site-open: ## MỞ LẠI toàn bộ duoclieuhk
+	sudo ./deploy/hk-site.sh open
+
+.PHONY: site-status
+site-status: ## Đang đóng hay mở? (thử lần lượt từng domain)
+	./deploy/hk-site.sh status
+
+# ---------- Frontend ----------
 .PHONY: web
 web: ## Chạy Next.js dev
 	cd frontend && npm run dev

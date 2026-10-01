@@ -58,3 +58,57 @@ Gặp các điểm này: liệt kê 2–3 phương án + đánh đổi rồi h�
 ## Quyết định spec đã chốt
 - Community Pool "doanh số" = **theo KỲ** (per_period).
 - Hub level theo lũy kế nhập: **L1 <50tr · L2 [50tr,100tr) · L3 ≥100tr** (rate 15/20/25%).
+
+## CÔNG TẮC TẠM ĐÓNG TOÀN HỆ THỐNG (vận hành)
+Chặn ở **nginx**, một cờ cho TẤT CẢ domain duoclieuhk: `duoclieuhk.vn` · `www` ·
+`invest` · `admin` · `api` · `api-web`.
+
+```bash
+sudo ./deploy/hk-site.sh close      # ĐÓNG hết  (make site-close)
+sudo ./deploy/hk-site.sh open       # MỞ lại    (make site-open)
+./deploy/hk-site.sh status          # đang đóng hay mở (make site-status)
+sudo ./deploy/hk-site.sh install    # cài/cập nhật config nginx (đã chạy 1 lần)
+```
+
+- **Cờ = file `/etc/nginx/flags/duoclieuhk.closed`** — tạo/xoá là ăn NGAY, không reload
+  nginx, không rebuild image, **không dừng container** → DB/đơn hàng/ledger nguyên vẹn,
+  mở lại là chạy tiếp.
+- Khi đóng: mọi URL trả **503 + `Retry-After`** (KHÔNG phải 404/200) → Google hiểu là tạm
+  thời, không rớt index. Web/admin trả trang HTML tạm đóng, `api*` trả JSON
+  `{"error":"service_closed"}`. `/.well-known/acme-challenge/` vẫn mở để gia hạn SSL.
+- **Xem trước khi đang đóng** (nội bộ): mở URL kèm `?mo_cua=<KEY>` → nginx set cookie 12h.
+  KEY nằm ở `/etc/nginx/conf.d/duoclieuhk-closed.conf` (**không commit**; đổi KEY phải
+  `nginx -t && systemctl reload nginx`).
+- Nguồn config trong repo: `deploy/hk-site.sh` · `deploy/nginx/duoclieuhk-closed.conf` ·
+  `deploy/nginx/snippet-duoclieuhk-closed*.conf` · `deploy/closed-page/*.tpl`.
+  Mỗi vhost 443 include snippet ngay sau `client_max_body_size`.
+- Đổi nội dung trang tạm đóng: `close --title/--msg/--until/--hotline/--email`, hoặc sửa
+  template rồi chạy lại `close`.
+
+## VẬN HÀNH — BACKUP & WATCHDOG (dựng 06/09/2026)
+
+**Backup HKGROUP** — `/root/scripts/hkgroup-backup.sh`, cron 2h sáng (giờ VN).
+DB (`pg_dump -Fc`, tự verify đọc được ≥20 bảng) + volume `hkgroup_uploaddata`,
+giữ 30 ngày ở `/root/backups/hkgroup/`, bản mới nhất là `latest-db.dump.gz` /
+`latest-uploads.tar.gz`. Thất bại → báo Telegram. Xem cách khôi phục:
+`/root/scripts/hkgroup-backup.sh --restore-help`.
+
+**Watchdog toàn VPS** — `/root/scripts/docker-watchdog.sh`, cron mỗi 5 phút + `@reboot`.
+Danh sách kỳ vọng ở `/root/.config/watchdog/expected.conf` (64 container + 64 URL).
+Container dừng → **tự `docker start`**; URL trả 5xx → báo Telegram (báo 1 lần khi hỏng,
+1 lần khi hồi phục, nhắc lại mỗi 6h). Biết cờ tạm đóng: nếu
+`/etc/nginx/flags/duoclieuhk.closed` tồn tại thì kỳ vọng duoclieuhk = 503, không báo động giả.
+Thêm/bớt: sửa file trên, hoặc `docker-watchdog.sh --seed` để sinh lại từ hiện trạng.
+Xem không sửa gì: `--status`.
+
+## Cổ tức: quy tắc làm tròn (chốt 06/09/2026)
+`planDividendAmounts` trong `/root/hkgroup/backend/internal/service/dividend.go` chia bằng
+**SỐ NGUYÊN** (big.Int, không float — BẤT BIẾN #1), phần dư do làm tròn dồn cho **cổ đông lớn
+nhất** nên `Σ payout == total` tuyệt đối (BẤT BIẾN #4). Cổ đông được sắp `shares DESC, user_id`
+trước khi chia vì `ListAllShareholdings` không có ORDER BY — không sắp thì người nhận phần dư
+đổi mỗi lần chạy. Test: `backend/internal/service/dividend_alloc_test.go`.
+
+> **Lệch 4đ lịch sử — KHÔNG phải bug mới.** 3 đợt cổ tức tháng 6/2026
+> (`5c4dfeec…` dư 2đ, `0fd41267…` dư 1đ, `b9ca5aaa…` dư 1đ) được chia bằng code float cũ nên
+> `Σ dividend_payouts` thiếu 4đ so với `Σ dividends`. Tiền đã trả xong; **giữ nguyên theo quyết
+> định 06/09/2026** để sổ sách khớp tiền thật đã chuyển. Từ đợt mới trở đi lệch = 0.
