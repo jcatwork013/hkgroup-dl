@@ -20,14 +20,21 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # Server-side (RSC/sitemap) fetch catalog/settings từ API duy nhất.
-      INVEST_INTERNAL_API_URL: https://api.duoclieuhk.vn
+      # Server-side (RSC/sitemap) fetch catalog/settings THẲNG tới container api của project
+      # hkgroup qua mạng docker nội bộ (~5ms) thay vì vòng ra Cloudflare rồi quay lại (0.1–1s
+      # mỗi lần → trang sản phẩm no-store bị chậm). Cần join mạng `hkgroup_default` bên dưới.
+      INVEST_INTERNAL_API_URL: http://hkgroup-api-1:8080
       NEXT_PUBLIC_INVEST_API_URL: https://api.duoclieuhk.vn
     ports:
       - "127.0.0.1:13120:3000" # host-nginx: duoclieuhk.vn → 127.0.0.1:13120
-    networks: [hkshop-net]
+    networks: [hkshop-net, hkgroup]
 
 networks:
   hkshop-net:
     name: hkshop-net
     driver: bridge
+  # Mạng của project hkgroup (/root/hkgroup) — chỉ để gọi api nội bộ. Nếu hkgroup bị
+  # `compose down` (mạng bị tạo lại) thì phải recreate hkshop-web để nối lại.
+  hkgroup:
+    name: hkgroup_default
+    external: true
